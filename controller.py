@@ -1,35 +1,36 @@
 import threading
+from astra.bots.login_manager import LoginManager
 from astra.bots.worker import Worker
-
 
 class BotController:
     def __init__(self, credentials):
         self.credentials = credentials
         self.threads = []
 
-    def run_bot(self, username, password, session_file):
-        worker = Worker(username, password, session_file)
-        worker.like_and_save_by_hashtag("hinduism", limit=10, min_delay=5, max_delay=10)
+    def run_worker(self, client):
+        worker = Worker(client)
+        worker.like_and_save_by_hashtag("hinduism")
 
-    def start_all_bots(self):
-        for username, password, session_file in self.credentials:
-            thread = threading.Thread(target=self.run_bot, args=(username, password, session_file))
-            self.threads.append(thread)
-            thread.start()
+    def start(self):
+        manager = LoginManager(self.credentials)
+        clients = manager.login_all()
 
-    def wait_for_completion(self):
-        for thread in self.threads:
-            thread.join()
+        for client in clients.values():
+            t = threading.Thread(target=self.run_worker, args=(client,))
+            self.threads.append(t)
+            t.start()
+
+    def wait(self):
+        for t in self.threads:
+            t.join()
         print("All bots have finished.")
-
 
 if __name__ == "__main__":
     credentials = [
-        ("marshal_jon333", "dollar@1357", "session1.json"),
-        ("bot2_username", "bot2_password", "session2.json"),
-        ("bot3_username", "bot3_password", "session3.json"),
+        ("account1", "password1", "session1.json"),
+        ("account2", "password2", "session2.json"),
     ]
 
     controller = BotController(credentials)
-    controller.start_all_bots()
-    controller.wait_for_completion()
+    controller.start()
+    controller.wait()
